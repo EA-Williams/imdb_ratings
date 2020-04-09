@@ -1,7 +1,8 @@
 #load relevant package libraries
 library(tidyverse)
 library(viridis)  # for colour palette (colourblind and greyscale friendly)
-
+library(png)
+library(cowplot)
 # set ID for The Simpsons - from https://www.imdb.com/title/tt0096697/
 simpsons_id <- "tt0096697"
 law_order_id <- "tt0098844"
@@ -30,10 +31,9 @@ simpsons_episodes <- episodes %>%
 
 # theme for the plot
 tile_theme = theme(
-  text = element_text(family = "Akbar"),
-  plot.background = element_rect(fill = "#FFD90F"),
+  #text = element_text(family = "Akbar"),
+  plot.background = element_rect(fill = "#FFD90F", colour = NA),
   panel.background = element_rect(fill=NA),
-  #panel.border = element_rect(fill=NA,color="black", size=0.5, linetype="solid"),
   panel.grid.major = element_blank(),
   panel.grid.minor = element_blank(),
   axis.ticks = element_blank(), 
@@ -42,12 +42,9 @@ tile_theme = theme(
   legend.text = element_text(color="black", size=8),
   legend.position = "top",
   legend.background = element_rect(fill = NA),
-  #strip.background = element_rect(fill = "grey85", colour = NA),
   legend.title=element_text())
 
-#ggplot(data = simpsons_episodes, aes(x = numVotes, y = averageRating)) + geom_point(alpha = 0.2)
-
-ggplot(data = simpsons_episodes, aes(x = seasonNumber, y = episodeNumber)) +
+plot <- ggplot(data = simpsons_episodes, aes(x = seasonNumber, y = episodeNumber)) +
   geom_tile(aes(fill = averageRating), colour = "black") +
   geom_text(aes(label = format(averageRating, digits = 2)), size = 2) +
   coord_fixed() +
@@ -59,8 +56,35 @@ ggplot(data = simpsons_episodes, aes(x = seasonNumber, y = episodeNumber)) +
                      expand = c(0,0),
                      breaks = 1:max(simpsons_episodes$seasonNumber),
                      name = "Season") +
-  scale_fill_viridis() + tile_theme
+  scale_fill_viridis(name = "Rating") + tile_theme +
+ guides(fill = guide_colourbar(barwidth = 10, barheight = 1, title.position = "top", title.hjust = 0.5,
+                               frame.colour = "black", ticks.colour = "black"))
 
+# get just the legend so we can plot it separately
+legend <- get_legend(plot) # from cowplot
+
+# read in the images
+homer <- readPNG("images/homer_face_transparent.png") %>%
+  rasterGrob(interpolate = TRUE)
+logo <- readPNG("images/simpsons_logo_transparent.png") %>%
+  rasterGrob(interpolate = TRUE)
+
+#from cow_plot
+bottom_row <- plot_grid(homer, plot + theme(legend.position="none"), ncol = 2, rel_widths = c(1, 4)) +
+  theme(plot.background = element_rect(fill = "#FFD90F", colour = NA))
+bottom_row
+
+top_row <- plot_grid(logo, legend3, ncol = 2, rel_widths = c(1,1)) +
+  theme(plot.background = element_rect(fill = "#FFD90F", colour = NA))
+top_row
+
+combine <- plot_grid(top_row, plot + theme(legend.position="none"), nrow = 2, rel_heights = c(1, 5), align = "hv") +
+  theme(plot.background = element_rect(fill = "#FFD90F", colour = NA))
+combine
+
+legend2 <- add_sub(legend, "Good", x  = 0.5, y = 1, hjust = -2.2, size = 10)
+legend3 <- add_sub(legend2, "Bad", x  = 0.5, y = 2, hjust = 4.4, size = 10)
+plot(legend3)
 
 
 num_eps <- simpsons_episodes %>%
@@ -71,6 +95,6 @@ num_eps <- simpsons_episodes %>%
 ggplot(data = ratings, aes(x = numVotes, y = averageRating)) + geom_point(alpha = 0.2)
 
 ## install.packages(devtools)
-devtools::install_github("Ryo-N7/tvthemes")
-loadfonts(device='win')
-windowsFont()
+#devtools::install_github("Ryo-N7/tvthemes")
+#loadfonts(device='win')
+#windowsFont()
